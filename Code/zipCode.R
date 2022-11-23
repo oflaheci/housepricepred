@@ -29,25 +29,25 @@ output_stargazer <- function(outputFile, appendVal=FALSE, ...) {
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 # categories to intervals
-dat <- readRDS("data/train.rds")
-hist(dat$BldgGrade)
+train <- readRDS("../Data/train.rds")
+hist(train$BldgGrade)
 
-sort(unique(dat$BldgGrade))
+sort(unique(train$BldgGrade))
 
-with(dat, boxplot(AdjSalePrice ~ BldgGrade))
+with(train, boxplot(AdjSalePrice ~ BldgGrade))
 #1 is a cabin, 2 is substandard, 5 is fair, 10 is very good, 12 is luxury and 
 #13 is a mansion.
 
 # -----------------------------------------------------
 # ordered factor
 
-mod3 <- lm(dat$AdjSalePrice ~ as.ordered(dat$BldgGrade))
+mod3 <- lm(train$AdjSalePrice ~ as.ordered(train$BldgGrade))
 stargazer(mod3, type = "text")
 # L - linear; Q - quadratic ; C cubic
 
 # -------------------------------------------------
 #many categories
-dat %>%
+train %>%
   group_by(ZipCode) %>%
   summarise(n = n()) %>%
   arrange(desc(n)) %>%
@@ -56,7 +56,7 @@ dat %>%
   coord_flip() +
   xlab("Zip Code")
 
-zip_group <- dat %>%
+zip_group <- train %>%
   group_by(ZipCode) %>%
   summarise(med_price = median(AdjSalePrice),
             count = n()) %>%
@@ -64,16 +64,58 @@ zip_group <- dat %>%
   mutate(cumul_count = cumsum(count),
          ZipGroup = ntile(cumul_count, 5))
 
-dat <- dat %>%
+train <- train %>%
   left_join(select(zip_group, ZipCode, ZipGroup), by = "ZipCode")
 
-mod4 <- lm(AdjSalePrice ~ SqFtTotLiving + BldgGrade + ZipGroup, data = dat)
+#mod1 <- lm(AdjSalePrice ~ SqFtTotLiving + BldgGrade + ZipGroup, data = dat)
+#mod2 <- lm(AdjSalePrice ~ SqFtTotLiving + BldgGrade + as.factor(ZipGroup), data = dat)
+
+mod3 <- lm(AdjSalePrice ~ 
+             SqFtTotLiving + I(SqFtTotLiving^2) + 
+             BldgGrade + 
+             ZipGroup + I(ZipGroup), 
+           data = train)
+
+stargazer(mod3, type = "text")
+
+par(mfrow = c(2, 2)) # we change the graphic device to show 4 plots at once
+plot(mod3) # we supply our lm object to plot()
+
+
+
+#mod4 <- lm(AdjSalePrice ~ SqFtTotLiving +
+#             I(SqFtTotLiving^2) + 
+#             BldgGrade + 
+#             as.factor(ZipGroup), 
+#           data = dat)
+
+#stargazer(mod1, mod2,mod3, mod4, type = "text")
+
+
+
+#dev.off()
+outliers <- c(15204, 8893, 12591, 4465)
+
+dat %>% filter(ID %in% outliers)
+
+dat[][dat$ID[-outliers]]
+
+fivenum(dat[][9:17])
+
 
 stargazer(mod4, type = "text")
+
+
+
+
 
 modx <- lm(AdjSalePrice ~ SqFtTotLiving + BldgGrade, data = dat)
 View(modx$residuals)
 dat$residuals = modx$residuals
+
+
+
+
 
 zip_group <- dat %>%
   group_by(ZipCode) %>%

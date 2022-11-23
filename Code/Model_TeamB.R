@@ -18,18 +18,49 @@ pkgTest <- function(pkg){
 lapply(c("ggplot2", "stargazer", "tidyverse", "stringr", "broom"),  pkgTest)
 
 # Load training data
-train <- readRDS("data/train.rds")
+train <- readRDS("../Data/train.rds")
 
 # Data transformation
-train <- train %>% 
-  # Add here any code necessary to transform variables
-  
-  # Model
-  mod <- lm(# your model formula here
-    , 
-    data = dat,
+
+#exclude outliers
+train <-train[-match(outliers,train$ID),]
+
+#add zipgroup
+train %>%
+  group_by(ZipCode) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n)) %>%
+  ggplot(aes(as.factor(reorder(ZipCode, n)), n)) +
+  geom_col() +
+  coord_flip() +
+  xlab("Zip Code")
+
+zip_group <- train %>%
+  group_by(ZipCode) %>%
+  summarise(med_price = median(AdjSalePrice),
+            count = n()) %>%
+  arrange(med_price) %>%
+  mutate(cumul_count = cumsum(count),
+         ZipGroup = ntile(cumul_count, 5))
+
+train <- train %>%
+  left_join(select(zip_group, ZipCode, ZipGroup), by = "ZipCode")
+
+
+# Model
+mod <- lm(AdjSalePrice ~ 
+              SqFtTotLiving + I(SqFtTotLiving^2) + 
+              BldgGrade + 
+              ZipGroup + I(ZipGroup), 
+            data = train, 
     na.action = na.omit)
 
+stargazer(mod, type = "text")
+  
+par(mfrow = c(2, 2)) # we change the graphic device to show 4 plots at once
+plot(mod) # we supply our lm object to plot()
+  
+  
 summary(mod)
 
 ########## do not fill in below the line ###########
