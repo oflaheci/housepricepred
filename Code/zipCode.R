@@ -98,7 +98,7 @@ outliers <- c(15204, 8893, 12591, 4465)
 
 dat %>% filter(ID %in% outliers)
 
-dat[][dat$ID[-outliers]]
+train[-match(outliers,train$ID),]
 
 fivenum(dat[][9:17])
 
