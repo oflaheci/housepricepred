@@ -24,6 +24,7 @@ train <- readRDS("../Data/train.rds")
 
 #exclude outliers
 outliers <- c(15204, 8893, 12591, 4465)
+
 train <-train[-match(outliers,train$ID),]
 
 #add zipgroup
